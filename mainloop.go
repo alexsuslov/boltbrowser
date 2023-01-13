@@ -1,6 +1,7 @@
+//go:build !windows
 // +build !windows
 
-package main
+package boltbrowser
 
 import (
 	"os"
@@ -9,7 +10,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-func mainLoop(memBolt *BoltDB, style Style) {
+func MainLoop(memBolt *BoltDB, style Style) {
 	screens := defaultScreensForData(memBolt)
 	displayScreen := screens[BrowserScreenIndex]
 	layoutAndDrawScreen(displayScreen, style)

@@ -1,4 +1,4 @@
-package main
+package boltbrowser
 
 import (
 	"encoding/json"
@@ -538,7 +538,7 @@ func (screen *BrowserScreen) drawHeader(style Style) {
 	headerStringLen := func(fileName string) int {
 		return len(ProgramName) + len(fileName) + 1
 	}
-	headerFileName := currentFilename
+	headerFileName := CurrentFilename
 	if headerStringLen(headerFileName) > width {
 		headerFileName = filepath.Base(headerFileName)
 	}
@@ -958,7 +958,7 @@ func (screen *BrowserScreen) clearMessage() {
 
 func (screen *BrowserScreen) refreshDatabase() {
 	shadowDB := screen.db
-	screen.db = screen.db.refreshDatabase()
+	screen.db = screen.db.RefreshDatabase()
 	screen.db.syncOpenBuckets(shadowDB)
 }
 

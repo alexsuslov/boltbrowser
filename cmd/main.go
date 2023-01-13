@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/alexsuslov/boltbrowser"
 	"os"
 	"strings"
 	"time"
@@ -11,26 +12,11 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-var ProgramName = "boltbrowser"
-var VersionNum = 2.0
-
-var databaseFiles []string
-var db *bolt.DB
-var memBolt *BoltDB
-
-var currentFilename string
-
 const DefaultDBOpenTimeout = time.Second
 
-var AppArgs struct {
-	DBOpenTimeout time.Duration
-	ReadOnly      bool
-	NoValue       bool
-}
-
 func init() {
-	AppArgs.DBOpenTimeout = DefaultDBOpenTimeout
-	AppArgs.ReadOnly = false
+	boltbrowser.AppArgs.DBOpenTimeout = DefaultDBOpenTimeout
+	boltbrowser.AppArgs.ReadOnly = false
 }
 
 func parseArgs() {
@@ -42,7 +28,7 @@ func parseArgs() {
 	for i := range parms {
 		// All 'option' arguments start with "-"
 		if !strings.HasPrefix(parms[i], "-") {
-			databaseFiles = append(databaseFiles, parms[i])
+			boltbrowser.DatabaseFiles = append(boltbrowser.DatabaseFiles, parms[i])
 			continue
 		}
 		if strings.Contains(parms[i], "=") {
@@ -51,10 +37,10 @@ func parseArgs() {
 			key, val := pts[0], pts[1]
 			switch key {
 			case "-timeout":
-				AppArgs.DBOpenTimeout, err = time.ParseDuration(val)
+				boltbrowser.AppArgs.DBOpenTimeout, err = time.ParseDuration(val)
 				if err != nil {
 					// See if we can successfully parse by adding a 's'
-					AppArgs.DBOpenTimeout, err = time.ParseDuration(val + "s")
+					boltbrowser.AppArgs.DBOpenTimeout, err = time.ParseDuration(val + "s")
 				}
 				// If err is still not nil, print usage
 				if err != nil {
@@ -62,11 +48,11 @@ func parseArgs() {
 				}
 			case "-readonly", "-ro":
 				if val == "true" {
-					AppArgs.ReadOnly = true
+					boltbrowser.AppArgs.ReadOnly = true
 				}
 			case "-no-value":
 				if val == "true" {
-					AppArgs.NoValue = true
+					boltbrowser.AppArgs.NoValue = true
 				}
 			case "-help":
 				printUsage(nil)
@@ -77,9 +63,9 @@ func parseArgs() {
 			// Single-word arguments
 			switch parms[i] {
 			case "-readonly", "-ro":
-				AppArgs.ReadOnly = true
+				boltbrowser.AppArgs.ReadOnly = true
 			case "-no-value":
-				AppArgs.NoValue = true
+				boltbrowser.AppArgs.NoValue = true
 			case "-help":
 				printUsage(nil)
 			default:
@@ -93,7 +79,7 @@ func printUsage(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 	}
-	fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] <filename(s)>\nOptions:\n", ProgramName)
+	fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] <filename(s)>\nOptions:\n", boltbrowser.ProgramName)
 	fmt.Fprintf(os.Stderr, "  -timeout=duration\n        DB file open timeout (default 1s)\n")
 	fmt.Fprintf(os.Stderr, "  -ro, -readonly   \n        Open the DB in read-only mode\n")
 	fmt.Fprintf(os.Stderr, "  -no-value        \n        Do not display a value in left pane\n")
@@ -109,19 +95,19 @@ func main() {
 		panic(err)
 	}
 	defer termbox.Close()
-	style := defaultStyle()
+	style := boltbrowser.DefaultStyle()
 	termbox.SetOutputMode(termbox.Output256)
 
-	for _, databaseFile := range databaseFiles {
-		currentFilename = databaseFile
-		db, err = bolt.Open(databaseFile, 0600, &bolt.Options{Timeout: AppArgs.DBOpenTimeout})
+	for _, databaseFile := range boltbrowser.DatabaseFiles {
+		boltbrowser.CurrentFilename = databaseFile
+		boltbrowser.DB, err = bolt.Open(databaseFile, 0600, &bolt.Options{Timeout: boltbrowser.AppArgs.DBOpenTimeout})
 		if err == bolt.ErrTimeout {
 			termbox.Close()
 			fmt.Printf("File %s is locked. Make sure it's not used by another app and try again\n", databaseFile)
 			os.Exit(1)
 		} else if err != nil {
-			if len(databaseFiles) > 1 {
-				mainLoop(nil, style)
+			if len(boltbrowser.DatabaseFiles) > 1 {
+				boltbrowser.MainLoop(nil, style)
 				continue
 			} else {
 				termbox.Close()
@@ -131,14 +117,14 @@ func main() {
 		}
 
 		// First things first, load the database into memory
-		memBolt.refreshDatabase()
-		if AppArgs.ReadOnly {
+		boltbrowser.MemBolt.RefreshDatabase()
+		if boltbrowser.AppArgs.ReadOnly {
 			// If we're opening it in readonly mode, close it now
-			db.Close()
+			boltbrowser.DB.Close()
 		}
 
 		// Kick off the UI loop
-		mainLoop(memBolt, style)
-		defer db.Close()
+		boltbrowser.MainLoop(boltbrowser.MemBolt, style)
+		defer boltbrowser.DB.Close()
 	}
 }

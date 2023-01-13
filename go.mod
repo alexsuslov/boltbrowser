@@ -1,4 +1,4 @@
-module github.com/br0xen/boltbrowser
+module github.com/alexsuslov/boltbrowser
 
 require (
 	github.com/boltdb/bolt v1.3.1
